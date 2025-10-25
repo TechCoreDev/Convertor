@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TechCore • Convertisseur PNG → WebP (gratuit, offline)</title>
+  <meta name="description" content="Convertissez vos PNG en WebP en un clic : glisser-déposer, qualité réglable, redimensionnement, transparence conservée. 100% local, par TechCore." />
+  <meta name="theme-color" content="#0b0b10" />
+  <style>
+    :root{
+      --bg:#0b0b10; --bg2:#11141b; --card:#151a23; --text:#f6f7fb; --muted:#aeb4c2;
+      --brand:#4cc2ff; --brand-2:#5fffbd; --ring:rgba(255,255,255,.14);
+      --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background: radial-gradient(1200px 600px at 10% -10%, rgba(92,190,255,.08), transparent 60%),
+                 radial-gradient(1000px 500px at 110% 10%, rgba(95,255,189,.08), transparent 60%),
+                 var(--bg);
+      color:var(--text); font: 16px/1.5 Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:20px clamp(16px, 4vw, 40px);
+      position:sticky; top:0; backdrop-filter:saturate(1.2) blur(8px);
+      background:linear-gradient(to bottom, rgba(11,11,16,.85), rgba(11,11,16,.6) 60%, transparent);
+      z-index:10; border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .logo{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text)}
+    .logo-badge{
+      width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg, var(--brand), var(--brand-2));
+      display:grid; place-items:center; box-shadow:0 8px 20px rgba(76,194,255,.35), 0 2px 6px rgba(95,255,189,.2);
+      font-weight:700; letter-spacing:.5px; color:#071317;
+    }
+    .logo span{font-weight:700; letter-spacing:.2px}
+    .github a{color:var(--muted); text-decoration:none; border:1px solid rgba(255,255,255,.1); padding:8px 12px; border-radius:12px}
+    .wrap{max-width:1100px; margin:32px auto; padding:0 clamp(16px, 4vw, 40px)}
+    .hero{
+      display:grid; gap:18px; margin:8px 0 20px;
+    }
+    .hero h1{font-size: clamp(28px, 4.2vw, 44px); margin:0; line-height:1.1; letter-spacing:.2px}
+    .hero p{margin:0; color:var(--muted)}
+    .panel{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding:16px;
+    }
+    .grid{
+      display:grid; gap:16px;
+      grid-template-columns: 1.2fr .8fr;
+    }
+    @media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
+
+    /* Dropzone */
+    .dropzone{
+      display:grid; place-items:center; text-align:center; padding:28px;
+      border:2px dashed rgba(255,255,255,.14); border-radius: var(--radius);
+      transition:.2s ease; background:var(--bg2);
+    }
+    .dropzone.drag{ border-color: var(--brand); background: rgba(76,194,255,.08); }
+    .dropzone input{ display:none; }
+    .dz-title{font-weight:700}
+    .dz-sub{color:var(--muted); font-size:14px}
+    .dz-actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:12px}
+    .btn{
+      appearance:none; border:1px solid rgba(255,255,255,.14);
+      background:#0f131a; color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer;
+      transition:.15s ease; font-weight:600;
+    }
+    .btn:hover{ border-color: var(--brand); transform: translateY(-1px); }
+    .btn.primary{ background:linear-gradient(135deg, var(--brand), var(--brand-2)); color:#062018; border:none; }
+    .btn.ghost{ background:transparent }
+    .btn.small{ padding:8px 10px; border-radius:10px; font-size:14px }
+
+    /* Options */
+    .options{ display:grid; gap:14px; padding:14px; background:var(--card); border-radius:14px; border:1px solid rgba(255,255,255,.08); }
+    .opt-row{ display:grid; gap:10px; grid-template-columns: 1fr auto; align-items:center; }
+    .opt-row label{ color:var(--muted); font-size:14px }
+    .range-wrap{ display:flex; align-items:center; gap:10px }
+    input[type="range"]{ width:180px }
+    .number{ width:86px; background:#0f131a; color:var(--text); border:1px solid rgba(255,255,255,.14); border-radius:10px; padding:8px }
+    .check{ display:flex; align-items:center; gap:10px; justify-content:space-between }
+    .check input{ transform: scale(1.2) }
+
+    /* Results */
+    .results{ margin-top:18px; display:grid; gap:12px }
+    .file{
+      display:grid; gap:12px; padding:12px; border:1px solid rgba(255,255,255,.08);
+      border-radius:14px; background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+    }
+    .file-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap }
+    .name{ font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 60ch;}
+    .meta{ color:var(--muted); font-size:13px; display:flex; gap:12px; flex-wrap:wrap }
+    .bad{ color:#ff8c8c } .good{ color:#8cffc9 }
+    .previews{ display:flex; gap:12px; flex-wrap:wrap }
+    .thumb{
+      width:160px; height:120px; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,.08); background:#0e1218; display:grid; place-items:center;
+    }
+    .thumb img, .thumb canvas{max-width:100%; max-height:100%}
+    .file-actions{ display:flex; gap:10px; flex-wrap:wrap }
+
+    footer{ color:var(--muted); text-align:center; padding:28px 16px 60px }
+    .muted{ color:var(--muted) }
+    .hidden{ display:none !important }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="logo" href="#" aria-label="TechCore Accueil">
+      <div class="logo-badge">TC</div>
+      <span>TechCore • PNG → WebP</span>
+    </a>
+    <div class="github">
+      <a href="#" title="Fonctionne 100% local">⚡ Offline • Confidentialité respectée</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Convertisseur <span style="background:linear-gradient(135deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent;">PNG → WebP</span></h1>
+      <p>Glissez vos images, réglez la qualité et téléchargez en WebP. Transparence conservée, conversions multiples, tout se fait sur votre ordinateur.</p>
+    </section>
+
+    <section class="grid">
+      <!-- Left: Dropzone & Results -->
+      <div class="panel">
+        <div id="dropzone" class="dropzone" tabindex="0" aria-label="Zone de dépôt des fichiers">
+          <input id="fileInput" type="file" accept="image/png,image/*" multiple />
+          <div>
+            <div class="dz-title">Déposez vos images ici</div>
+            <div class="dz-sub">ou</div>
+            <div class="dz-actions">
+              <button class="btn primary" id="browseBtn">Choisir des fichiers</button>
+              <button class="btn ghost small" id="demoBtn" title="Ajouter une image de démonstration">Ajouter une démo</button>
+            </div>
+            <div class="dz-sub" style="margin-top:8px">PNG, JPG, JPEG, WEBP, BMP, GIF (fixe)</div>
+          </div>
+        </div>
+
+        <div id="results" class="results"></div>
+
+        <div id="bulkActions" class="hidden" style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px">
+          <button class="btn ghost" id="clearBtn">Tout effacer</button>
+          <button class="btn" id="downloadAllBtn">Télécharger tout</button>
+          <button class="btn primary" id="reconvertAllBtn" title="Reconvertir selon les options">Reconvertir</button>
+        </div>
+      </div>
+
+      <!-- Right: Options -->
+      <aside class="panel">
+        <h3 style="margin:4px 6px 12px">Options</h3>
+        <div class="options">
+          <div class="opt-row">
+            <label for="quality">Qualité WebP</label>
+            <div class="range-wrap">
+              <input id="quality" type="range" min="0.1" max="1" step="0.01" value="0.8" />
+              <output id="qualityOut">0.80</output>
+            </div>
+          </div>
+
+          <div class="opt-row">
+            <label>Redimensionner (max)</label>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+              <input id="maxW" class="number" type="number" min="16" max="12000" step="1" placeholder="Largeur" />
+              <span class="muted">×</span>
+              <input id="maxH" class="number" type="number" min="16" max="12000" step="1" placeholder="Hauteur" />
+              <label class="muted" style="display:flex; align-items:center; gap:8px">
+                <input id="keepAspect" type="checkbox" checked /> Conserver les proportions
+              </label>
+            </div>
+          </div>
+
+          <div class="check">
+            <label for="lossless">Mode lossless (WebP)</label>
+            <input id="lossless" type="checkbox" />
+          </div>
+
+          <div class="check">
+            <label for="nameKeep">Conserver le nom d'origine</label>
+            <input id="nameKeep" type="checkbox" checked />
+          </div>
+
+          <div class="check">
+            <label for="autoDownload">Téléchargement auto</label>
+            <input id="autoDownload" type="checkbox" />
+          </div>
+
+          <div class="check">
+            <label for="dark">Thème sombre</label>
+            <input id="dark" type="checkbox" checked />
+          </div>
+
+          <div class="opt-row">
+            <label>Conversion rapide</label>
+            <div>
+              <button id="convertAllBtn" class="btn primary small">Convertir la sélection</button>
+            </div>
+          </div>
+
+          <p class="muted" style="margin:0">Astuce : vous pouvez déposer des PNG mais aussi des JPG/JPEG pour les convertir en WebP plus léger (la transparence est préservée si présente).</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer>
+    Créé avec ❤️ par <strong>TechCore</strong>. Aucune image n’est envoyée sur un serveur : tout reste sur votre appareil.
+  </footer>
+
+  <script>
+    // Vérifier le support WebP
+    (function checkWebPSupport(){
+      const can = document.createElement('canvas');
+      if(!can.toDataURL) return warn();
+      const ok = can.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+      if(!ok) warn();
+      function warn(){
+        console.warn('WebP non supporté par ce navigateur.');
+        const p = document.createElement('p');
+        p.className = 'file bad';
+        p.innerHTML = "⚠️ Votre navigateur ne semble pas supporter l'export WebP. Essayez la dernière version de Chrome, Edge, Opera, Safari ou Firefox.";
+        document.querySelector('.wrap').prepend(p);
+      }
+    })();
+
+    // UI refs
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const browseBtn = document.getElementById('browseBtn');
+    const demoBtn = document.getElementById('demoBtn');
+    const results = document.getElementById('results');
+    const bulkActions = document.getElementById('bulkActions');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const reconvertAllBtn = document.getElementById('reconvertAllBtn');
+
+    // Options
+    const quality = document.getElementById('quality');
+    const qualityOut = document.getElementById('qualityOut');
+    const maxW = document.getElementById('maxW');
+    const maxH = document.getElementById('maxH');
+    const keepAspect = document.getElementById('keepAspect');
+    const lossless = document.getElementById('lossless');
+    const nameKeep = document.getElementById('nameKeep');
+    const autoDownload = document.getElementById('autoDownload');
+    const dark = document.getElementById('dark');
+    const convertAllBtn = document.getElementById('convertAllBtn');
+
+    quality.addEventListener('input', () => qualityOut.textContent = (+quality.value).toFixed(2));
+    dark.addEventListener('change', () => {
+      document.body.style.background = dark.checked
+        ? 'radial-gradient(1200px 600px at 10% -10%, rgba(92,190,255,.08), transparent 60%), radial-gradient(1000px 500px at 110% 10%, rgba(95,255,189,.08), transparent 60%), var(--bg)'
+        : '#ffffff';
+      document.body.style.color = dark.checked ? 'var(--text)' : '#111';
+    });
+
+    // State
+    let items = []; // {file, name, sizeIn, sizeOut, blob, url, thumbUrl}
+
+    browseBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+    demoBtn.addEventListener('click', addDemo);
+
+    // Drag & drop
+    ['dragenter','dragover'].forEach(evt => {
+      dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('drag'); });
+    });
+    ['dragleave','drop'].forEach(evt => {
+      dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('drag'); });
+    });
+    dropzone.addEventListener('drop', e => {
+      const files = e.dataTransfer.files;
+      handleFiles(files);
+    });
+
+    async function handleFiles(fileList){
+      if(!fileList || !fileList.length) return;
+      const accepted = [...fileList].filter(f => /^image\//.test(f.type));
+      if(!accepted.length) return;
+      for(const file of accepted){
+        await addItem(file);
+      }
+      bulkActions.classList.toggle('hidden', items.length === 0);
+    }
+
+    function readableSize(bytes){
+      if(bytes < 1024) return bytes + ' B';
+      const units = ['KB','MB','GB'];
+      let i = -1, size = bytes;
+      do { size = size / 1024; i++; } while(size >= 1024 && i < units.length - 1);
+      return size.toFixed(size < 10 ? 2 : 1) + ' ' + units[i];
+    }
+
+    async function addItem(file){
+      const url = URL.createObjectURL(file);
+      const img = await loadImage(url);
+      const thumbUrl = await renderThumb(img);
+
+      const item = { file, name: file.name, sizeIn: file.size, sizeOut: null, blob: null, url, thumbUrl, outUrl:null };
+      items.push(item);
+
+      const node = renderFileRow(item);
+      results.prepend(node);
+
+      // Auto-convert on add
+      const out = await convertImage(img, file);
+      item.blob = out.blob;
+      item.sizeOut = out.blob.size;
+      item.outUrl = URL.createObjectURL(out.blob);
+
+      // Update row
+      updateRow(node, item);
+      if(autoDownload.checked) triggerDownload(item);
+    }
+
+    function renderFileRow(item){
+      const el = document.createElement('div');
+      el.className = 'file';
+      el.dataset.name = item.name;
+
+      el.innerHTML = `
+        <div class="file-head">
+          <div class="name" title="${item.name}">${item.name}</div>
+          <div class="meta">
+            <span class="in">Entrant : ${readableSize(item.sizeIn)}</span>
+            <span class="out">Sortant : —</span>
+            <span class="delta">Gain : —</span>
+          </div>
+        </div>
+        <div class="previews">
+          <div class="thumb"><img alt="aperçu" src="${item.thumbUrl}"/></div>
+          <div class="thumb" data-canvas></div>
+        </div>
+        <div class="file-actions">
+          <button class="btn small" data-reconvert>Reconvertir</button>
+          <button class="btn small" data-download disabled>Télécharger</button>
+          <button class="btn small ghost" data-remove>Supprimer</button>
+        </div>
+      `;
+
+      // Bind actions
+      el.querySelector('[data-reconvert]').addEventListener('click', async ()=>{
+        const img = await loadImage(item.url);
+        const out = await convertImage(img, item.file);
+        item.blob = out.blob;
+        item.sizeOut = out.blob.size;
+        item.outUrl && URL.revokeObjectURL(item.outUrl);
+        item.outUrl = URL.createObjectURL(out.blob);
+        updateRow(el, item);
+      });
+      el.querySelector('[data-download]').addEventListener('click', ()=> triggerDownload(item));
+      el.querySelector('[data-remove]').addEventListener('click', ()=>{
+        // Cleanup
+        try{ URL.revokeObjectURL(item.url); }catch(e){}
+        try{ item.outUrl && URL.revokeObjectURL(item.outUrl);}catch(e){}
+        items = items.filter(x=>x!==item);
+        el.remove();
+        bulkActions.classList.toggle('hidden', items.length === 0);
+      });
+
+      return el;
+    }
+
+    function updateRow(el, item){
+      const outEl = el.querySelector('.out');
+      const deltaEl = el.querySelector('.delta');
+      if(item.sizeOut != null){
+        outEl.textContent = 'Sortant : ' + readableSize(item.sizeOut);
+        const gain = ((1 - (item.sizeOut / item.sizeIn)) * 100);
+        const label = (gain >= 0 ? 'Gain' : 'Augmentation') + ' : ' + (isFinite(gain) ? Math.abs(gain).toFixed(1) + '%' : '—');
+        deltaEl.textContent = label;
+        deltaEl.classList.toggle('good', gain >= 0);
+        deltaEl.classList.toggle('bad', gain < 0);
+        const canvasWrap = el.querySelector('[data-canvas]');
+        canvasWrap.innerHTML = '';
+        const prev = document.createElement('img');
+        prev.src = item.outUrl;
+        prev.alt = 'aperçu WebP';
+        canvasWrap.appendChild(prev);
+        el.querySelector('[data-download]').disabled = false;
+      } else {
+        outEl.textContent = 'Sortant : —';
+        deltaEl.textContent = 'Gain : —';
+        el.querySelector('[data-download]').disabled = true;
+      }
+    }
+
+    function loadImage(src){
+      return new Promise((resolve, reject)=>{
+        const img = new Image();
+        img.onload = ()=> resolve(img);
+        img.onerror = reject;
+        img.crossOrigin = 'anonymous';
+        img.src = src;
+      });
+    }
+
+    function renderThumb(img){
+      const w = 220, h = 160;
+      const ratio = Math.min(w / img.width, h / img.height, 1);
+      const cw = Math.round(img.width * ratio);
+      const ch = Math.round(img.height * ratio);
+      const c = document.createElement('canvas');
+      c.width = cw; c.height = ch;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, cw, ch);
+      return c.toDataURL('image/webp', .8);
+    }
+
+    function computeTargetSize(img){
+      const W = parseInt(maxW.value || 0, 10);
+      const H = parseInt(maxH.value || 0, 10);
+      let tw = img.width, th = img.height;
+      if(W || H){
+        if(keepAspect.checked){
+          const rw = W ? W / img.width : Infinity;
+          const rh = H ? H / img.height : Infinity;
+          const r = Math.min(isFinite(rw)?rw:rh, isFinite(rh)?rh:rw);
+          if(isFinite(r) && r > 0){
+            tw = Math.min(Math.round(img.width * r), 12000);
+            th = Math.min(Math.round(img.height * r), 12000);
+          }
+        } else {
+          tw = W || img.width;
+          th = H || img.height;
+        }
+      }
+      return {tw, th};
+    }
+
+    async function convertImage(img, file){
+      const {tw, th} = computeTargetSize(img);
+      const canvas = document.createElement('canvas');
+      canvas.width = tw; canvas.height = th;
+      const ctx = canvas.getContext('2d');
+      // Efface le fond pour bien garder l'alpha
+      ctx.clearRect(0,0,tw,th);
+      ctx.drawImage(img, 0, 0, tw, th);
+
+      let blob;
+      if(lossless.checked){
+        blob = await canvasToBlob(canvas, 'image/webp', 1.0, true); // lossless
+      } else {
+        const q = Math.max(0.1, Math.min(1, +quality.value || 0.8));
+        blob = await canvasToBlob(canvas, 'image/webp', q, false);
+      }
+      return { blob, name: buildOutName(file.name) };
+    }
+
+    function canvasToBlob(canvas, type, quality, losslessFlag){
+      return new Promise((resolve, reject)=>{
+        // Certains navigateurs interprètent lossless via quality=1 ET un paramètre spécifique ; on passe par toDataURL puis fetch
+        if(canvas.toBlob){
+          // Pas de paramètre lossless dans toBlob standard ; on se base sur quality.
+          canvas.toBlob(b => b?resolve(b):reject(new Error('toBlob failed')), type, quality);
+        } else {
+          try{
+            const dataURL = canvas.toDataURL(type, quality);
+            fetch(dataURL).then(r=>r.blob()).then(resolve).catch(reject);
+          }catch(e){ reject(e); }
+        }
+      });
+    }
+
+    function buildOutName(inName){
+      const base = inName.replace(/\.[^.]+$/,'');
+      const stamp = nameKeep.checked ? '' : '-techcore';
+      return base + stamp + '.webp';
+    }
+
+    function triggerDownload(item){
+      const a = document.createElement('a');
+      a.download = buildOutName(item.name);
+      a.href = item.outUrl;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    // Bulk actions
+    clearBtn.addEventListener('click', ()=>{
+      items.forEach(i=>{
+        try{ URL.revokeObjectURL(i.url);}catch(e){}
+        try{ i.outUrl && URL.revokeObjectURL(i.outUrl);}catch(e){}
+      });
+      items = [];
+      results.innerHTML = '';
+      bulkActions.classList.add('hidden');
+    });
+
+    downloadAllBtn.addEventListener('click', async ()=>{
+      // Lance des téléchargements séquentiels pour éviter les blocages
+      for(const item of items){
+        if(item.outUrl) triggerDownload(item);
+        await wait(120);
+      }
+    });
+
+    reconvertAllBtn.addEventListener('click', async ()=>{
+      for(const el of [...results.querySelectorAll('.file')].reverse()){
+        const name = el.dataset.name;
+        const item = items.find(i=>i.name===name);
+        if(!item) continue;
+        const img = await loadImage(item.url);
+        const out = await convertImage(img, item.file);
+        item.blob = out.blob;
+        item.sizeOut = out.blob.size;
+        item.outUrl && URL.revokeObjectURL(item.outUrl);
+        item.outUrl = URL.createObjectURL(out.blob);
+        updateRow(el, item);
+        await wait(30);
+      }
+    });
+
+    convertAllBtn.addEventListener('click', ()=> reconvertAllBtn.click());
+
+    function wait(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+    // Petite image de démo intégrée (PNG 1×1 transparent + dessin)
+    async function addDemo(){
+      const demoPng = await createDemoPng();
+      const file = new File([demoPng.blob], 'demo-techcore.png', {type:'image/png'});
+      handleFiles([file]);
+    }
+
+    async function createDemoPng(){
+      const c = document.createElement('canvas'); c.width=512; c.height=320;
+      const ctx = c.getContext('2d');
+      // Fond transparent + grille
+      ctx.clearRect(0,0,c.width,c.height);
+      ctx.fillStyle='rgba(255,255,255,.06)';
+      for(let x=0;x<c.width;x+=16){ ctx.fillRect(x,0,1,c.height); }
+      for(let y=0;y<c.height;y+=16){ ctx.fillRect(0,y,c.width,1); }
+      // Badge TechCore
+      const grd = ctx.createLinearGradient(0,0,c.width,0);
+      grd.addColorStop(0,'#4cc2ff'); grd.addColorStop(1,'#5fffbd');
+      ctx.fillStyle=grd;
+      roundRect(ctx, 24, 24, 110, 42, 12); ctx.fill();
+      ctx.fillStyle='#062018'; ctx.font='bold 20px Inter, system-ui, sans-serif'; ctx.fillText('TechCore', 34, 51);
+      // Titre
+      ctx.fillStyle='#f6f7fb';
+      ctx.font='bold 34px Inter, system-ui, sans-serif';
+      ctx.fillText('PNG → WebP', 24, 110);
+      // Disque dégradé semi-transp
+      const r = 90;
+      const cx = 230, cy = 210;
+      const g2 = ctx.createRadialGradient(cx,cy,10, cx,cy,r);
+      g2.addColorStop(0,'rgba(92,190,255,.35)'); g2.addColorStop(1,'rgba(92,190,255,0)');
+      ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+      // Appareil photo stylisé
+      ctx.lineWidth=10; ctx.strokeStyle='rgba(255,255,255,.85)';
+      ctx.strokeRect(330,140,130,90);
+      ctx.beginPath(); ctx.arc(395,185,24,0,Math.PI*2); ctx.stroke();
+
+      const blob = await new Promise(r=> c.toBlob(r,'image/png'));
+      return { blob };
+      function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+    }
+
+    // Accessibilité : focus sur la dropzone pour Enter
+    dropzone.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); fileInput.click(); }
+    });
+  </script>
+</body>
+</html>
